@@ -1,0 +1,46 @@
+plugins {
+    id 'java'
+}
+
+group 'me.geek.tom'
+version '2.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven { url 'https://libraries.minecraft.net/' }
+    maven { url 'https://maven.fabricmc.net/' }
+    maven { url 'https://files.minecraftforge.net/maven/' }
+}
+
+dependencies {
+    // Discord
+    implementation 'com.discord4j:discord4j-core:3.1.0'
+
+    // Logging
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.13.1'
+    implementation 'org.apache.logging.log4j:log4j-iostreams:2.13.1'
+    implementation 'io.sentry:sentry:1.7.30'
+
+    // Config
+    implementation 'com.electronwill.night-config:core:3.6.3'
+    implementation 'com.electronwill.night-config:toml:3.6.3'
+
+    // Command parsing
+    implementation 'com.mojang:brigadier:1.0.17'
+    implementation 'com.beust:jcommander:1.71'
+
+    // Mappings
+    implementation 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
+    implementation 'net.minecraftforge:srgutils:0.2.12'
+    implementation 'com.github.ben-manes.caffeine:caffeine:2.8.5'
+
+    // I/O
+    implementation 'commons-io:commons-io:2.6'
+    implementation 'com.google.code.gson:gson:2.8.5'
+    implementation 'com.squareup.okio:okio:2.8.0'
+
+    // Utils
+    implementation 'com.google.guava:guava:29.0-jre'
+    implementation 'it.unimi.dsi:fastutil:8.2.2'
+}
