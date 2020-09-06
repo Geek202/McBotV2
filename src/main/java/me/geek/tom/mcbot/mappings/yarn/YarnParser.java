@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.io.*;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
@@ -24,7 +25,7 @@ public class YarnParser extends MappingsParser {
     public YarnParser(String gameVersion, String version, File yarnArchive) {
         super(gameVersion, version);
         this.yarnArchive = yarnArchive;
-        this.cache = loadMappings().cache();
+        this.cache = loadMappings().cache(Duration.ofHours(1));
     }
 
     public Mono<List<Mapping>> loadMappings() {

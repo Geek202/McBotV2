@@ -8,6 +8,7 @@ import reactor.core.publisher.Mono;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
@@ -37,7 +38,7 @@ public class McpParser extends MappingsParser {
         this.mcpConfigZip = mcpConfigZip;
         this.mcpBotZip = mcpBotZip;
         this.isPre13 = isPre13;
-        this.mappings = loadMcpBotZip().cache();
+        this.mappings = loadMcpBotZip().cache(Duration.ofHours(1));
     }
 
     @Override
