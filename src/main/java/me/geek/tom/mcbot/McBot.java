@@ -128,6 +128,10 @@ public class McBot {
         return owner;
     }
 
+    public ISentryProxy getSentry() {
+        return sentry;
+    }
+
     public static void main(String[] args) {
         Args ags = new Args();
         JCommander.newBuilder()
@@ -155,5 +159,4 @@ public class McBot {
         @Parameter(names = { "-stoken", "--sentry-token", "-st" }, description = "The token to use to send to sentry.io")
         public String sentryToken;
     }
-
 }

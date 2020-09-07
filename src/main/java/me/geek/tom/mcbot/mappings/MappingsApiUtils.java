@@ -10,6 +10,7 @@ import me.geek.tom.mcbot.mappings.yarn.YarnVersion;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -87,8 +88,10 @@ public class MappingsApiUtils {
     public Mono<GameVersion> getLatestMcpGameVersion() {
         return getAllMcpVersions()
                 .filter(v -> !v.isEmpty())
-                .map(v -> v.get(0))
-                .map(v -> new GameVersion(v.gameVersion, true)); // Mcp only targets stable releases
+                .flatMapIterable(l -> l)
+                .map(v -> new GameVersion(v.gameVersion, true)) // Mcp only targets stable releases
+                .collectList()
+                .doOnNext(v -> v.sort(Comparator.<GameVersion,GameVersion>comparing(a -> a).reversed()))
+                .map(l -> l.get(0));
     }
-
 }

@@ -4,6 +4,7 @@ import com.beust.jcommander.JCommander;
 import com.google.common.reflect.ClassPath;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
+import discord4j.rest.http.client.ClientException;
 import discord4j.rest.util.Color;
 import me.geek.tom.mcbot.McBot;
 import org.jetbrains.annotations.NotNull;
@@ -75,8 +76,7 @@ public class CommandManager {
             if (cmd == null)
                 return event.getMessage().getChannel().map(channel -> channel.createEmbed(embed -> embed
                         .setTitle("McBot error!")
-                        .setDescription("`NullPointerException: command not found!`")));
-
+                        .setDescription("`Command not found!`")));
             try {
                 T t;
                 String message = event.getMessage().getContent();
@@ -92,16 +92,27 @@ public class CommandManager {
                     t = null;
                 }
                 JCommander finalJCommander = jCommander;
-                return event.getMessage().getChannel().flatMap(channel ->
-                        channel.typeUntil(cmd.handle(new CommandContext<>(mcBot, finalJCommander, commandName[0], event, t))
+                return event.getMessage().getChannel()
+                        .flatMap(channel -> channel
+                                .typeUntil(cmd.handle(new CommandContext<>(mcBot, finalJCommander, commandName[0], event, t))
                                 .doOnError(e -> LOGGER.error("Error processing command: ", e))
-                                .onErrorResume(e -> handleException(event, e).then(Mono.empty()))
-                        ).then());
+                                .onErrorResume(e -> handleException(event, e, "Command handler: " + cmd.getClass().getSimpleName())
+                                        .then(Mono.empty()))
+                                ).then())
+                        .onErrorResume(ClientException.class, e -> {
+                            if (e != null && e.getStatus().code() == 403) {
+                                return Mono.empty();
+                            } else if (e != null) {
+                                return Mono.error(e);
+                            } else {
+                                return Mono.empty();
+                            }
+                        });
             } catch (Exception e) {
-                return handleException(event, e);
+                return handleException(event, e, "Handling command input");
             }
         } catch (ClassCastException e) {
-            return event.getMessage().getChannel().map(channel -> channel.createEmbed(embed -> embed
+            return event.getMessage().getChannel().flatMap(channel -> channel.createEmbed(embed -> embed
                     .setTitle("McBot error!")
                     .setDescription("`" + e.getClass().getSimpleName() + ": " +
                             String.join("`\n`", e.getMessage().split("[\n\r]")))));
@@ -109,13 +120,13 @@ public class CommandManager {
     }
 
     @NotNull
-    private Mono<Message> handleException(MessageCreateEvent event, Throwable t) {
+    private Mono<Message> handleException(MessageCreateEvent event, Throwable t, String context) {
         return event.getMessage().getChannel().flatMap(channel -> channel.createEmbed(embed -> embed
                         .setTitle("McBot error!")
                         .setDescription("`" + t.getClass().getSimpleName() + ": " +
                                 String.join("`\n`", t.getMessage().split("[\n\r]")) + "`")
                         .setColor(Color.RED)
-                )
+                ).doOnNext($ -> mcBot.getSentry().handleUnexpectedError(t, event.getMessage().getContent(), context))
         );
     }
 
