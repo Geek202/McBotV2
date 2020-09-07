@@ -41,7 +41,7 @@ public abstract class CommandMappings<P extends MappingsParser, T extends Mappin
                 .flatMap(MappingsParser::readMappings)
                 .flatMapIterable(l -> l)
                 .filter(lookupType::matches)
-                .filter(m -> m.getIntermediate().endsWith(searchTerm))
+                .filter(m -> m.matchesSearch(searchTerm))
                 .collectList()
                 .transform(Util.flatZipWith(ctx.getChannel(), (mappings, channel) -> {
                     if (!mappings.isEmpty()) {

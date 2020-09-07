@@ -112,6 +112,10 @@ public class Mapping {
         return -1;
     }
 
+    public boolean matchesSearch(String query) {
+        return getName().endsWith(query) || getIntermediate().endsWith(query);
+    }
+
     public void setName(String name) {
         this.name = name;
     }
