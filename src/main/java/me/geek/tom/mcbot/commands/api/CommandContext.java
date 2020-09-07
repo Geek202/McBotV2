@@ -100,4 +100,12 @@ public class CommandContext<T extends CommandArgs> {
     public CommandManager getManager() {
         return manager;
     }
+
+    public Optional<Snowflake> getGuildId() {
+        return guildId;
+    }
+
+    public Mono<Member> getMember() {
+        return member;
+    }
 }

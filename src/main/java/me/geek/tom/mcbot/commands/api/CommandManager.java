@@ -2,32 +2,43 @@ package me.geek.tom.mcbot.commands.api;
 
 import com.beust.jcommander.JCommander;
 import com.google.common.reflect.ClassPath;
+import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.rest.http.client.ClientException;
 import discord4j.rest.util.Color;
 import me.geek.tom.mcbot.McBot;
+import me.geek.tom.mcbot.commands.CommandCommands;
+import me.geek.tom.mcbot.storage.GeneralGuildSettings;
+import me.geek.tom.mcbot.storage.api.GuildStorageManager;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CommandManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CommandManager.class);
 
-    public static final String COMMAND_PREFIX = "m!";
+    public static final String DEFAULT_COMMAND_PREFIX = "m!";
 
     private final Map<String, ICommand<?>> commands;
     private final McBot mcBot;
 
+    private final GuildStorageManager<GeneralGuildSettings> settings;
+
+    private CommandCommands commandCommands;
+
     public CommandManager(McBot mcBot) {
         this.mcBot = mcBot;
         this.commands = new ConcurrentHashMap<>();
+        settings = new GuildStorageManager<>(new File("configs", "general"), GeneralGuildSettings::new);
     }
 
     @SuppressWarnings("UnstableApiUsage")
@@ -57,14 +68,37 @@ public class CommandManager {
                     this.commands.put(subcommand.getName(), subcommand);
                 }
 
+                if (cmd instanceof CommandCommands)
+                    this.commandCommands = (CommandCommands) cmd;
+
                 this.commands.put(name, cmd);
             }
         }
+
+        settings.start();
+    }
+
+    public Mono<?> handleCommandCommands(MessageCreateEvent event) {
+        if (commandCommands != null)
+            return commandCommands.handle(new CommandContext<>(mcBot, null, "commands", event, null))
+                    .onErrorResume(ClientException.class, e -> {
+                        if (e != null && e.getStatus().code() == 403) {
+                            return Mono.empty();
+                        } else if (e != null) {
+                            return Mono.error(e);
+                        } else {
+                            return Mono.empty();
+                        }
+                    });
+        else
+            return handleException(event, new RuntimeException("Failed to locate commands command!"), "running command 'commands'");
     }
 
     public <T extends CommandArgs> Mono<?> handleCommand(MessageCreateEvent event) {
         String content = event.getMessage().getContent();
-        String command = content.substring(COMMAND_PREFIX.length());
+        Optional<Snowflake> guildId = event.getGuildId();
+        String command = content.substring((guildId.isPresent() ? getCommandPrefix(guildId.get().asString())
+                : DEFAULT_COMMAND_PREFIX).length());
         String[] commandName = command.split(" ", 2);
         if (commandName.length < 1) {
             return Mono.empty();
@@ -119,6 +153,15 @@ public class CommandManager {
         }
     }
 
+    public void updateCommandPrefix(String guildId, String newPrefix) {
+        settings.modify(guildId, settings ->
+                settings.setCommandPrefix(newPrefix));
+    }
+
+    public String getCommandPrefix(String guildId) {
+        return settings.read(guildId).getCommandPrefix();
+    }
+
     @NotNull
     private Mono<Message> handleException(MessageCreateEvent event, Throwable t, String context) {
         return event.getMessage().getChannel().flatMap(channel -> channel.createEmbed(embed -> embed
@@ -128,6 +171,10 @@ public class CommandManager {
                         .setColor(Color.RED)
                 ).doOnNext($ -> mcBot.getSentry().handleUnexpectedError(t, event.getMessage().getContent(), context))
         );
+    }
+
+    public Mono<Void> shutdown() {
+        return Mono.fromRunnable(settings::stop);
     }
 
     public Map<String, ICommand<?>> getCommands() {
