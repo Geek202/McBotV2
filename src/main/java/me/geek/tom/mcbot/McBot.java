@@ -19,6 +19,7 @@ import me.geek.tom.mcbot.mappings.MappingsApiUtils;
 import me.geek.tom.mcbot.mappings.MappingsDatabase;
 import me.geek.tom.mcbot.mappings.MavenDownloader;
 import me.geek.tom.mcbot.mappings.mcp.McpDatabase;
+import me.geek.tom.mcbot.mappings.mojmap.MojmapDatabase;
 import me.geek.tom.mcbot.mappings.yarn.YarnDatabase;
 import me.geek.tom.mcbot.util.PaginatedMessageSystem;
 import org.slf4j.Logger;
@@ -43,6 +44,7 @@ public class McBot {
 
     private YarnDatabase yarnDatabase;
     private McpDatabase mcpDatabase;
+    private MojmapDatabase mojmapDatabase;
 
     private MappingsApiUtils apiUtils;
 
@@ -116,6 +118,7 @@ public class McBot {
 
         yarnDatabase = new YarnDatabase(this);
         mcpDatabase = new McpDatabase(this);
+        mojmapDatabase = new MojmapDatabase(this, new File("mojmapData"));
 
         client.onDisconnect().flatMap(__ -> cmdManager.shutdown()).block();
         MappingsDatabase.shutdown();
@@ -137,6 +140,10 @@ public class McBot {
 
     public McpDatabase getMcpDatabase() {
         return mcpDatabase;
+    }
+
+    public MojmapDatabase getMojmapDatabase() {
+        return mojmapDatabase;
     }
 
     public MappingsApiUtils getMappingUtils() {

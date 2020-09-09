@@ -15,7 +15,7 @@ import java.util.zip.ZipFile;
 
 public class McpParser extends MappingsParser {
 
-    private static Method load;
+    public static Method load;
 
     static {
         try {
@@ -38,7 +38,7 @@ public class McpParser extends MappingsParser {
         this.mcpConfigZip = mcpConfigZip;
         this.mcpBotZip = mcpBotZip;
         this.isPre13 = isPre13;
-        this.mappings = loadMcpBotZip().cache(Duration.ofHours(1));
+        this.mappings = loadMcpBotZip().cache(Duration.ofHours(1L));
     }
 
     @Override
