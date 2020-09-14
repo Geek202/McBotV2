@@ -70,7 +70,8 @@ public class CommandContext<T extends CommandArgs> {
         if (jCommander == null) // Why is a command with no arguments asking for usage \__(O.O)__/
             return Mono.empty();
         StringBuilder usage = new StringBuilder();
-        jCommander.setProgramName("m!" + commandName);
+        jCommander.setProgramName((guildId.isPresent() ? manager.getCommandPrefix(guildId.get().asString())
+                : CommandManager.DEFAULT_COMMAND_PREFIX) + commandName);
         jCommander.usage(usage);
         return channel.flatMap(channel -> channel.createEmbed(embed -> embed
                 .setTitle("Usage:")
