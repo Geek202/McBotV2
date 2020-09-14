@@ -18,9 +18,12 @@ import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 public class CommandManager {
 
@@ -42,7 +45,7 @@ public class CommandManager {
     }
 
     @SuppressWarnings("UnstableApiUsage")
-    public void locateCommands(ClassLoader loader, String pkg) throws IOException, IllegalAccessException, InstantiationException {
+    public void locateCommands(ClassLoader loader, String pkg) throws IOException {
         ClassPath classPath = ClassPath.from(loader);
         for (ClassPath.ClassInfo info : classPath.getTopLevelClasses(pkg)) {
             Class<?> cls = info.load();
@@ -51,7 +54,28 @@ public class CommandManager {
                     LOGGER.warn("Found @Command annotated class " + cls.getSimpleName() + " that does not implement ICommand, ignoring...");
                     continue;
                 }
-                ICommand<?> cmd = (ICommand<?>) cls.newInstance();
+                Supplier<? extends ICommand<?>> constructor = () -> {
+                    try {
+                        return (ICommand<?>) cls.getDeclaredConstructor().newInstance();
+                    } catch (NoSuchMethodException e) {
+                        try {
+                            return (ICommand<?>) cls.getDeclaredConstructor(McBot.class).newInstance(mcBot);
+                        } catch (NoSuchMethodException e1) {
+                            LOGGER.warn("No valid command constructor found for command: " + cls.getSimpleName());
+                            return null;
+                        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e1) {
+                            throw new RuntimeException(cls.getSimpleName(), e);
+                        }
+                    } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+                        throw new RuntimeException(cls.getSimpleName(), e);
+                    }
+                };
+                ICommand<?> cmd = constructor.get();
+                if (cmd == null) {
+                    LOGGER.warn("Failed to construct command class: " + cls.getSimpleName());
+                    continue;
+                }
+
                 String name = cmd.getName();
                 if (this.commands.containsKey(name)) {
                     LOGGER.warn("Found command " + cls.getSimpleName() + " with name: " + name +
@@ -92,6 +116,28 @@ public class CommandManager {
                     });
         else
             return handleException(event, new RuntimeException("Failed to locate commands command!"), "running command 'commands'");
+    }
+
+    public Mono<Void> onBotReady(McBot mcBot) {
+        return Mono.just(commands.values())
+                .flatMapIterable(c -> c)
+                .map(c -> {
+                    c.onBotStarting(mcBot);
+                    return true;
+                }).collectList()
+                .then(Mono.empty());
+
+    }
+
+    public Mono<Void> onBotShutdown(McBot mcBot) {
+        return Mono.just(commands.values())
+                .flatMapIterable(c -> c)
+                .map(c -> {
+                    c.onBotStopping(mcBot);
+                    return true;
+                }).collectList()
+                .then(Mono.empty());
+
     }
 
     public <T extends CommandArgs> Mono<?> handleCommand(MessageCreateEvent event) {
@@ -174,7 +220,8 @@ public class CommandManager {
     }
 
     public Mono<Void> shutdown() {
-        return Mono.fromRunnable(settings::stop);
+        return Mono.fromRunnable(settings::stop)
+                .then(onBotShutdown(mcBot));
     }
 
     public Map<String, ICommand<?>> getCommands() {

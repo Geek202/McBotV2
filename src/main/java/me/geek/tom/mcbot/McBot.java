@@ -70,7 +70,7 @@ public class McBot {
             cmdManager.getCommands().entrySet().stream()
                     .map(e -> e.getKey() + ": " + e.getValue().getClass().getSimpleName())
                     .forEach(LOGGER::info);
-        } catch (IllegalAccessException | IOException | InstantiationException e) {
+        } catch (IOException e) {
             LOGGER.warn("Failed to locate commands: ", e);
         }
 
@@ -80,7 +80,12 @@ public class McBot {
                     User self = event.getSelf();
                     LOGGER.info("Logged in to Discord! Gateway version: " + event.getGatewayVersion() + ", Current User: " + self.getTag());
                     sentry.logGuildCount(event.getGuilds().size());
-                    return client.updatePresence(Presence.idle(Activity.watching("for @" + self.getUsername() + " commands")));
+                    Mono<Void> action = client.updatePresence(Presence.idle(Activity.watching("for @" + self.getUsername() + " commands")));
+                    if (cmdManager != null) {
+                        action = action.then(cmdManager.onBotReady(this));
+                    }
+
+                    return action;
                 }).subscribe();
 
         if (cmdManager != null) {
@@ -175,7 +180,7 @@ public class McBot {
         return cmdManager;
     }
 
-    @SuppressWarnings({"CanBeFinal", "unused"})
+    @SuppressWarnings({"CanBeFinal"})
     private static class Args {
         @Parameter(names = { "-token", "--token", "-t" }, required = true, description = "Bot token to log into Discord with")
         public String token;

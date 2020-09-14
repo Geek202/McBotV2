@@ -8,6 +8,7 @@ import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.MessageChannel;
+import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
 import me.geek.tom.mcbot.McBot;
 import reactor.core.publisher.Mono;
@@ -15,9 +16,10 @@ import reactor.core.publisher.Mono;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-@SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "FieldCanBeLocal", "unused"})
+@SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "FieldCanBeLocal"})
 public class CommandContext<T extends CommandArgs> {
 
     private final McBot mcBot;
@@ -58,6 +60,10 @@ public class CommandContext<T extends CommandArgs> {
 
     public Mono<Message> reply(String message) {
         return channel.flatMap(channel -> channel.createMessage(message));
+    }
+
+    public Mono<Message> reply(Consumer<EmbedCreateSpec> spec) {
+        return channel.flatMap(channel -> channel.createEmbed(spec));
     }
 
     public Mono<Message> showUsage() {
