@@ -1,6 +1,8 @@
 package me.geek.tom.mcbot.mappings;
 
 import me.geek.tom.mcbot.McBot;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
@@ -13,6 +15,7 @@ public abstract class MappingsDatabase<T extends MappingsParser> {
         t.setName("Mappings-Update-Worker");
         return t;
     });
+    private static final Logger LOGGER = LoggerFactory.getLogger(MappingsDatabase.class);
 
     private final McBot mcBot;
     private final Map<String, T> versions;
@@ -27,8 +30,10 @@ public abstract class MappingsDatabase<T extends MappingsParser> {
     }
 
     public static void shutdown() {
+        LOGGER.info("MappingsDatabase shutting down...");
         updaters.forEach(f -> f.cancel(false));
         UPDATE_EXECUTOR.shutdown();
+        LOGGER.info("MappingsDatabase shut down successfully!");
     }
 
     public Mono<Void> updateMappings() {

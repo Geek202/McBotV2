@@ -125,7 +125,8 @@ public class McBot {
         mcpDatabase = new McpDatabase(this);
         mojmapDatabase = new MojmapDatabase(this, new File("mojmapData"));
 
-        client.onDisconnect().flatMap(__ -> cmdManager.shutdown()).block();
+        client.onDisconnect().flatMap(__ -> cmdManager.shutdown())
+                .then(PaginatedMessageSystem.INSTANCE.shutdown()).block();
         MappingsDatabase.shutdown();
         sentry.logBotStop();
         LOGGER.info("So long, and thanks for all the fish!");

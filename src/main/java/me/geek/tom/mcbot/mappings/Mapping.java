@@ -1,6 +1,5 @@
 package me.geek.tom.mcbot.mappings;
 
-@SuppressWarnings("unused")
 public class Mapping {
 
     private final String intermediate;

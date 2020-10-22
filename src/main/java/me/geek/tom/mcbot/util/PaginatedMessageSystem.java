@@ -142,6 +142,10 @@ public class PaginatedMessageSystem {
         return new Builder(channel);
     }
 
+    public Mono<Void> shutdown() {
+        return Mono.fromRunnable(this.cleanup::shutdown);
+    }
+
     public Mono<?> onReactionAdded(ReactionAddEvent event) {
         Snowflake messageId = event.getMessageId();
         ReactionEmoji emoji = event.getEmoji();

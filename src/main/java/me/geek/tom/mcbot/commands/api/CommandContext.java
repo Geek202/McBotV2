@@ -67,16 +67,24 @@ public class CommandContext<T extends CommandArgs> {
     }
 
     public Mono<Message> showUsage() {
+        return showUsage(this.jCommander, this.guildId, this.manager, this.commandName, this.channel, null);
+    }
+
+    public static Mono<Message> showUsage(JCommander jCommander, Optional<Snowflake> guildId,
+                                          CommandManager manager, String commandName, Mono<MessageChannel> channel,
+                                          @Nullable String message) {
+
         if (jCommander == null) // Why is a command with no arguments asking for usage \__(O.O)__/
             return Mono.empty();
         StringBuilder usage = new StringBuilder();
         jCommander.setProgramName((guildId.isPresent() ? manager.getCommandPrefix(guildId.get().asString())
                 : CommandManager.DEFAULT_COMMAND_PREFIX) + commandName);
         jCommander.usage(usage);
-        return channel.flatMap(channel -> channel.createEmbed(embed -> embed
+        return channel.flatMap(chnl -> chnl.createEmbed(embed -> embed
                 .setTitle("Usage:")
                 .setDescription(Arrays.stream(usage.toString().split("[\n\r]"))
-                        .map(s -> "`" + s + "`").collect(Collectors.joining("\n")))
+                        .map(s -> "`" + s + "`").collect(Collectors.joining("\n"))
+                        + (message != null ? "\n\n`" + message + "`" : ""))
                 .setColor(Color.ORANGE)
         ));
     }

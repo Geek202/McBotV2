@@ -6,13 +6,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 
-@SuppressWarnings("unused")
 public class GameVersion implements Comparable<GameVersion> {
 
     public String version;
     public boolean stable;
 
-    @SuppressWarnings("unused")
     public GameVersion() { }
     public GameVersion(String version, boolean stable) {
         this.version = version;

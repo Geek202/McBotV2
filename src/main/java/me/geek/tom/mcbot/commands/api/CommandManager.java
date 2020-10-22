@@ -1,6 +1,7 @@
 package me.geek.tom.mcbot.commands.api;
 
 import com.beust.jcommander.JCommander;
+import com.beust.jcommander.ParameterException;
 import com.google.common.reflect.ClassPath;
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -167,18 +168,27 @@ public class CommandManager {
                     jCommander = JCommander.newBuilder()
                             .addObject(t)
                             .build();
-                    jCommander.parse((firstSpace >= 0 ? message.substring(firstSpace) : "").split(" "));
+
+                    try {
+                        jCommander.parse((firstSpace >= 0 ? message.substring(firstSpace) : "").split(" "));
+                    } catch (ParameterException e) {
+                        return CommandContext.showUsage(jCommander, guildId, this,
+                                commandName[0], event.getMessage().getChannel(), e.getLocalizedMessage());
+                    }
                 } else {
                     t = null;
                 }
                 JCommander finalJCommander = jCommander;
+                CommandContext<T> ctx = new CommandContext<>(mcBot, finalJCommander, commandName[0], event, t);
                 return event.getMessage().getChannel()
-                        .flatMap(channel -> channel
-                                .typeUntil(cmd.handle(new CommandContext<>(mcBot, finalJCommander, commandName[0], event, t))
-                                .doOnError(e -> LOGGER.error("Error processing command: ", e))
-                                .onErrorResume(e -> handleException(event, e, "Command handler: " + cmd.getClass().getSimpleName())
-                                        .then(Mono.empty()))
-                                ).then())
+                        .flatMap(channel -> {
+                            return channel
+                                    .typeUntil(cmd.handle(ctx)
+                                            .doOnError(e -> LOGGER.error("Error processing command: ", e))
+                                            .onErrorResume(e -> handleException(event, e, "Command handler: " + cmd.getClass().getSimpleName())
+                                                    .then(Mono.empty()))
+                                    ).then();
+                        })
                         .onErrorResume(ClientException.class, e -> {
                             if (e != null && e.getStatus().code() == 403) {
                                 return Mono.empty();
